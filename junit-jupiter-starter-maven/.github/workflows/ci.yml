@@ -1,13 +1,13 @@
-name: CI Pipeline
+name: Test Calculator Project
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
-  build-and-test:
+  test-calculator:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,56 +19,14 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: maven
 
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+    - name: Run tests
+      run: mvn test
 
-    - name: Verify project structure
-      run: |
-        echo "Project structure:"
-        find . -name "*.java" -type f | head -10
-        echo "POM version:"
-        grep -A 2 "<version>" pom.xml
+    - name: Generate coverage report
+      run: mvn jacoco:report
 
-    - name: Build with Maven
-      run: mvn clean compile -q
-
-    - name: Run tests with coverage
-      run: mvn test -q
-
-    - name: Generate JaCoCo coverage report and verify
-      run: mvn jacoco:report verify
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./target/site/jacoco/jacoco.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
-    - name: Package application
-      run: mvn package -DskipTests -q
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: jar-artifacts
-        path: |
-          target/*.jar
-          target/site/jacoco/
-        retention-days: 30
-
-    - name: Test Summary
-      run: |
-        echo "✅ Build completed successfully!"
-        echo "📊 Test Results:"
-        find . -name "surefire-reports" -type d -exec find {} -name "*.txt" \; | head -5 | xargs cat 2>/dev/null || echo "No surefire reports found"
+    - name: Verify coverage
+      run: mvn verify -DskipTests
         path: target/*.jar
         retention-days: 7
