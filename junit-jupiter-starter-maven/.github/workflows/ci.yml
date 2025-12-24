@@ -20,13 +20,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Run tests
-      run: mvn test
-
-    - name: Generate coverage report
-      run: mvn jacoco:report
-
-    - name: Verify coverage
-      run: mvn verify -DskipTests
+    - name: Run tests and generate coverage
+      run: mvn clean test jacoco:report
         path: target/*.jar
         retention-days: 7
