@@ -21,16 +21,31 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Verify project structure
+      run: |
+        echo "Project structure:"
+        find . -name "*.java" -type f | head -10
+        echo "POM version:"
+        grep -A 2 "<version>" pom.xml
+
     - name: Build with Maven
-      run: mvn clean compile
+      run: mvn clean compile -q
 
-    - name: Run tests
-      run: mvn test
+    - name: Run tests with coverage
+      run: mvn test -q
 
-    - name: Generate JaCoCo coverage report
-      run: mvn jacoco:report
+    - name: Generate JaCoCo coverage report and verify
+      run: mvn jacoco:report verify
 
-    - name: Upload coverage reports
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
         file: ./target/site/jacoco/jacoco.xml
@@ -38,15 +53,22 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-    - name: Check code coverage
-      run: mvn jacoco:check
-
     - name: Package application
-      run: mvn package -DskipTests
+      run: mvn package -DskipTests -q
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: jar-file
+        name: jar-artifacts
+        path: |
+          target/*.jar
+          target/site/jacoco/
+        retention-days: 30
+
+    - name: Test Summary
+      run: |
+        echo "✅ Build completed successfully!"
+        echo "📊 Test Results:"
+        find . -name "surefire-reports" -type d -exec find {} -name "*.txt" \; | head -5 | xargs cat 2>/dev/null || echo "No surefire reports found"
         path: target/*.jar
         retention-days: 7
